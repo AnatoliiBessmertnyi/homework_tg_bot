@@ -10,12 +10,6 @@ from logging.handlers import RotatingFileHandler
 from http import HTTPStatus
 
 load_dotenv()
-logging.basicConfig(
-    level=logging.INFO,
-    filename='program.log',
-    format='%(asctime)s, %(levelname)s, %(message)s, %(name)s',
-    encoding='utf-8'
-)
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -26,7 +20,6 @@ handler = RotatingFileHandler(
     encoding='utf-8'
 )
 logger.addHandler(handler)
-
 formatter = logging.Formatter(
     '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
@@ -50,17 +43,19 @@ HOMEWORK_VERDICTS = {
 
 def check_tokens():
     """Проверка доступности переменных окружения."""
-    if all([PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID]):
-        return True
+    return all([PRACTICUM_TOKEN, TELEGRAM_TOKEN, TELEGRAM_CHAT_ID])
 
 
 def send_message(bot, message):
     """Отправляет сообщение в Telegram чат."""
     try:
         bot.send_message(TELEGRAM_CHAT_ID, message)
-        logger.debug(f'Сообщение в чат {TELEGRAM_CHAT_ID}: {message}')
-    except Exception:
-        logger.error('Ошибка отправки сообщения в телеграм')
+    except Exception as error:
+        logger.error(f'Ошибка отправки {message}: {error}')
+    else:
+        logger.debug(
+            f'Сообщение "{message}" отправлено в чат: {TELEGRAM_CHAT_ID}!'
+        )
 
 
 def get_api_answer(timestamp):
@@ -71,24 +66,21 @@ def get_api_answer(timestamp):
         response = requests.get(ENDPOINT, headers=HEADERS, params=payload)
     except Exception as error:
         text = f'Ошибка при запросе к основному API: {error}'
-        logging.error(text)
         raise Exception(text)
     if response.status_code != HTTPStatus.OK.value:
         text = f'Ошибка запроса к API: {response.status_code}'
-        logging.error(text)
         raise Exception(text)
-    r = response.json()
-    return r
+    return response.json()
 
 
 def check_response(response):
     """Проверка ответа API на соответствие документации."""
-    if type(response) is not dict:
+    if not isinstance(response, dict):
         raise TypeError('Ответ API не словарь!')
     check_homeworks = response.get('homeworks')
     if check_homeworks is None:
         raise KeyError('Ключ "homeworks" не доступен!')
-    if type(check_homeworks) is not list:
+    if not isinstance(check_homeworks, list):
         raise TypeError('Ответ API не список!')
     if len(check_homeworks) > 0:
         return check_homeworks
