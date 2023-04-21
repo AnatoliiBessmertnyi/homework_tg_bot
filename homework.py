@@ -82,10 +82,12 @@ def check_response(response):
         raise KeyError('Ключ "homeworks" не доступен!')
     if not isinstance(check_homeworks, list):
         raise TypeError('Ответ API не список!')
-    if len(check_homeworks) > 0:
-        return check_homeworks
-    else:
-        logger.debug('Список Д/З пуст.')
+
+    try:
+        check_homeworks[0]
+    except IndexError:
+        raise IndexError('Список Д/З пуст.')
+    return check_homeworks
 
 
 def parse_status(homework):
@@ -106,6 +108,7 @@ def parse_status(homework):
 
 def main():
     """Основная логика работы бота."""
+    check_status = ''
     if not check_tokens():
         text = 'Отсутствуют одна или несколько переменных окружения'
         logging.critical(text)
@@ -117,12 +120,13 @@ def main():
         try:
             response = get_api_answer(timestamp)
             timestamp = response.get('current_date')
-            homework_status = check_response(response)
-            if homework_status:
-                message = parse_status(homework_status[0])
+
+            message = parse_status(check_response(response)[0])
+            if message != check_status:
+                send_message(bot, message)
+                check_status = message
             else:
-                message = 'У вас пока нет домашних заданий на проверке!'
-            send_message(bot, message)
+                logger.info('Статус не изменился')
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
             send_message(bot, message)
