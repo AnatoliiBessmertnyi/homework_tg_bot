@@ -1,13 +1,13 @@
 import logging
 import os
-import requests
 import sys
-import telegram
 import time
-
-from dotenv import load_dotenv
-from logging.handlers import RotatingFileHandler
 from http import HTTPStatus
+from logging.handlers import RotatingFileHandler
+
+import requests
+import telegram
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -84,7 +84,19 @@ def check_response(response):
         raise TypeError('Ответ API не список!')
 
     try:
-        check_homeworks[0]
+        # if not check_homeworks:
+        #     return True
+        # Но кажется логичнее было бы всю конструкцию изменить на if else!?
+
+        if len(check_homeworks) == 0:
+            return False
+# Поэтому такая проверка тут кажется более к месту.
+
+        # if len(check_homeworks) != 0:
+        #     return True
+# А вот такая инверсия выглядит проще для чтения, но она ломает pytest.
+# Не понимаю почему:(
+
     except IndexError:
         raise IndexError('Список Д/З пуст.')
     return check_homeworks
@@ -120,7 +132,6 @@ def main():
         try:
             response = get_api_answer(timestamp)
             timestamp = response.get('current_date')
-
             message = parse_status(check_response(response)[0])
             if message != check_status:
                 send_message(bot, message)
@@ -129,6 +140,7 @@ def main():
                 logger.info('Статус не изменился')
         except Exception as error:
             message = f'Сбой в работе программы: {error}'
+            logger.error(message)
             send_message(bot, message)
         finally:
             time.sleep(RETRY_PERIOD)
